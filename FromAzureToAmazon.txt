@@ -1,0 +1,143 @@
+
+From AZURE to Amazon
+Source: https://n2ws.com/blog/how-to-guides/migrate-azure-vm-aws
+
+
+---
+(First install the Amazon service --> shell.azure.com )
+Install-Module -Name AWSPowerShell -Force
+Set-AWSCredential -AccessKey XXXXXXXX -SecretKey XXXXXXX -StoreAs Default
+Set-DefaultAWSRegion -Region us-east-1
+
+---
+(Sysprep the VM)
+(RDP into AZURE VM, run this)
+C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe
+
+---
+(Stop the VM)
+Get-AzureRmVM -ResourceGroupName adbtesting -Name PSWA | Stop-AzureRmVm -Force
+
+---
+(Create a file share on Azure to migrate from cloud to cloud)
+$storageAccount = Get-AzureRmStorageAccount -ResourceGroupName adbtesting -Name adbtestingdisks656
+$storageKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.StorageAccountName | select -first 1).Value
+$storageContext = New-AzureStorageContext -StorageAccountName $storageAccount.StorageAccountName -StorageAccountKey $storageKey
+$share = New-AzureStorageShare -Name migrationstorage -Context $storageContext
+
+---
+(mount the drive)
+$secKey = ConvertTo-SecureString -String $storageKey -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential -ArgumentList "Azure\$($storageAccount.StorageAccountName)", $secKey
+$shareDrive = New-PSDrive -Name X -PSProvider FileSystem -Root "\\$($storageAccount.StorageAccountName).file.core.windows.net\$($share.Name)" -Credential $credential -Persist
+
+---
+NOW IN Amazon AWS---
+---
+(Create two json files, servicerole.json And policy.json)
+
+servicerole.json
+
+{
+"Version": "2012-10-17",
+"Statement": [
+{
+"Effect": "Allow",
+"Principal": { "Service": "vmie.amazonaws.com" },
+"Action": "sts:AssumeRole",
+"Condition": {
+"StringEquals":{
+"sts:Externalid": "vmimport"
+           }
+         }
+      }
+   ]
+}
+
+policy.json
+
+{
+"Version": "2012-10-17",
+"Statement": [
+{
+"Effect": "Allow",
+"Action":[
+"s3:GetBucketLocation",
+"s3:GetObject",
+"s3:ListBucket"
+],
+"Resource":[
+"arn:aws:s3:::disk-image-file-bucket",
+"arn:aws:s3:::disk-image-file-bucket/*"
+]
+},
+{
+"Effect": "Allow",
+"Action": [
+"ec2:ModifySnapshotAttribute",
+"ec2:CopySnapshot",
+"ec2:RegisterImage",
+"ec2:Describe*"
+],
+"Resource": "*"
+       }
+   ]
+}
+
+---
+(Save these two files on AWS disk)
+**
+
+---
+(Run the two json files)
+New-IAMRole -RoleName vmimport -AssumeRolePolicyDocument (Get-Content -Raw -Path X:\servicerole.json)
+Write-IAMRolePolicy -PolicyDocument (Get-Content -Raw -path X:\policy.json) -PolicyName vmimport -RoleName vmimport
+
+---
+(Get location of VM)
+$vm = Get-AzureRmVM -Name PSWA -ResourceGroupName ADBTESTING
+$vhdUri = $vm.StorageProfile.OsDisk.Vhd.Uri
+
+---
+(Save VM  VHD to azure FS we created)
+$localVhdPath = "$($shareDrive.Name):\$($vm.Name).vhd"
+Save-AzureRmVhd -ResourceGroupName $vm.ResourceGroupName -SourceUri $vhdUri -LocalFilePath $localVhdPath -NumberOfThreads 32
+
+---
+(Import into AWS - change s3-bucket-name)
+Write-S3Object -BucketName adambbucket -File $localVhdPath -Key pswa.vhd
+
+---
+(Create AWS Image)
+$container = New-Object Amazon.EC2.Model.ImageDiskContainer
+$container.Format = 'VHD'
+$container.UserBucket = New-Object Amazon.EC2.Model.UserBucket
+$container.UserBucket.S3Bucket = 'adambbucket'
+$container.UserBucket.S3Key = 'pswa.vhd'
+
+$params = @{ ClientToken = 'idempotencyToken'; Platform = 'Windows'; LicenseType = 'AWS'; DiskContainer = $container }
+
+$task = Import-EC2Image @params
+
+---
+(Use EC2ImportImageTask to get progress, can take 45 minutes or more)
+Get-EC2ImportImageTask -ImportTaskId $task.ImportTaskId
+
+---
+(OR loop it :))
+
+while ((Get-EC2ImportImageTask -ImportTaskId $task.ImportTaskId).StatusMessage -ne '?????') {
+Write-Host 'Waiting for image to import...'
+Start-Sleep -Seconds 10
+}
+Write-Host 'Image import complete!'
+
+---
+(Cleanup, remove FS created)
+Remove-AzureStorageShare -Name migrationstorage -Context $storageContext
+
+---
+
+
+
+
