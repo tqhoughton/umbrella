@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Umbrella Service
+Parameters:
+  DataBucket:
+    Type: String
+  BackupBucket:
+    Type: String
 Resources:
   # Lambda function that will fire every 5 minutes, check the Weather API
   # If the weather is dangerous, we notify the IT Pro of bad conditions
@@ -38,3 +43,24 @@ Resources:
       Runtime: nodejs8.10
       CodeUri: ./lambda/startBackupProcess
       MemorySize: 128
+      Environment:
+        Variables:
+          DATA_BUCKET: !Ref DataBucket
+          BACKUP_BUCKET: !Ref BackupBucket
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Resource:
+                - !Sub 'arn:aws:s3:::${DataBucket}/*'
+                - !Sub 'arn:aws:s3:::${DataBucket}'
+              Action:
+                - 's3:ListObjects'
+                - 's3:GetObject'
+                - 's3:ListBucket'
+            - Effect: Allow
+              Resource:
+                - !Sub 'arn:aws:s3:::${BackupBucket}/*'
+              Action:
+                - 's3:PutObject'
+
