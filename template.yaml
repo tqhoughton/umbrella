@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Umbrella Service
+Resources:
+  # Lambda function that will fire every 5 minutes, check the Weather API
+  # If the weather is dangerous, we notify the IT Pro of bad conditions
+  CronLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: !Sub 'Cron-${AWS::StackName}'
+      Handler: index.handler
+      Runtime: nodejs8.10
+      CodeUri: ./lambda/cron
+      MemorySize: 128
+      Events:
+        CronEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+  # Alexa skill for IT Pro to check the weather in a certain region
+  CheckWeatherAlexaSkill:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: !Sub 'CheckWeatherAlexaSkill-${AWS::StackName}'
+      Handler: index.handler
+      Runtime: nodejs8.10
+      CodeUri: ./lambda/checkWeatherAlexaSkill
+      MemorySize: 128
+  # Lambda function that starts the backup process, if the IT Pro chooses to
+  StartBackupProcess:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: !Sub 'StartBackupProcess-${AWS::StackName}'
+      Handler: index.handler
+      Runtime: nodejs8.10
+      CodeUri: ./lambda/startBackupProcess
+      MemorySize: 128
