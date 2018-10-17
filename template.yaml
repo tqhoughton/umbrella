@@ -7,8 +7,19 @@ Parameters:
   BackupBucket:
     Type: String
 Resources:
+  SentNotificationsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub 'WeatherData-${AWS::StackName}'
   # Lambda function that will fire every 5 minutes, check the Weather API
   # If the weather is dangerous, we notify the IT Pro of bad conditions
+  BadWeatherTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: !Ref 'AWS::StackName'
+      # Subscription:
+      # - Endpoint: +18016150877
+      #   Protocol: sms
   CronLambda:
     Type: AWS::Serverless::Function
     Properties:
@@ -22,7 +33,26 @@ Resources:
         CronEvent:
           Type: Schedule
           Properties:
-            Schedule: rate(5 minutes)
+            Schedule: rate(2 minutes)
+      Environment:
+        Variables:
+          SNS_TOPIC: !Ref BadWeatherTopic
+          DATA_TABLE: !Ref SentNotificationsTable
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Resource:
+                - !Ref BadWeatherTopic
+              Action:
+                - 'sns:Publish'
+            - Effect: Allow
+              Resource:
+                - !GetAtt SentNotificationsTable.Arn
+              Action:
+                - 'dynamodb:GetItem'
+                - 'dynamodb:PutItem'
+        
   # Alexa skill for IT Pro to check the weather in a certain region
   CheckWeatherAlexaSkill:
     Type: AWS::Serverless::Function
