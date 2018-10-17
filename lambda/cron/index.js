@@ -144,12 +144,14 @@ async function checkWeather(state, override) {
     weatherData.features = [{
       properties: {
         id: uuid(),
-        severity: 'critical',
+        severity: 'Critical',
         certainty: '100%',
-        headline: '9.9 Richter scale earthquake imminent. Prepare yourselves!'
+        headline: '9.9 Richter scale earthquake imminent'
       }
     }]
   }
+
+  weatherData.features = weatherData.features.filter(i => !(i.properties.severity === 'Minor'))
 
   return Promise.all(weatherData.features.map(async item => {
     let responseText = "";

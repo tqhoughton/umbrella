@@ -6,6 +6,9 @@ Parameters:
     Type: String
   BackupBucket:
     Type: String
+  AzureConnectionString:
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: AZURE_CONNECTION_STRING
 Resources:
   SentNotificationsTable:
     Type: AWS::Serverless::SimpleTable
@@ -67,7 +70,7 @@ Resources:
   StartBackupProcess:
     Type: AWS::Serverless::Function
     Properties:
-      Timeout: 10
+      Timeout: 300
       FunctionName: !Sub 'StartBackupProcess-${AWS::StackName}'
       Handler: index.handler
       Runtime: nodejs8.10
@@ -77,6 +80,7 @@ Resources:
         Variables:
           DATA_BUCKET: !Ref DataBucket
           BACKUP_BUCKET: !Ref BackupBucket
+          AZURE_STORAGE_CONNECTION_STRING: !Ref AzureConnectionString
       Policies:
         - Version: '2012-10-17'
           Statement:
