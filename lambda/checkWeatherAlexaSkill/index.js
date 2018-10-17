@@ -134,6 +134,22 @@ const LaunchRequestHandler = {
   }
 };
 
+const BackupDataHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest'
+      && request.intent.name === 'BackupDataIntent';
+  },
+  handle(handlerInput) {
+    // TODO: Actually back up the data by calling the other lambda
+    var responseText = "Okay, your data has been backed up.";
+    return handlerInput.responseBuilder
+      .speak(responseText)
+      .withSimpleCard(SKILL_NAME, responseText)
+      .getResponse();
+  }
+};
+
 const CheckWeatherHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
@@ -239,6 +255,7 @@ const skillBuilder = Alexa.SkillBuilders.standard();
 exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequestHandler,
+    BackupDataHandler,
     CheckWeatherHandler,
     HelpHandler,
     ExitHandler,
