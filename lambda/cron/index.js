@@ -9,12 +9,19 @@ const DynamoDB = new AWS.DynamoDB.DocumentClient();
 const snsTopic = process.env.SNS_TOPIC;
 const dataTable = process.env.DATA_TABLE;
 const uuid = require('uuid/v4');
+const Lambda = new AWS.Lambda();
+const backupFunction = process.env.BACKUP_FUNCTION;
 
-// USAGE:
-// abbrState('ny', 'name');
-// --> 'New York'
-// abbrState('New York', 'abbr');
-// --> 'NY'
+async function startBackupProcess() {
+  //   console.log("invokeLambda start: " + functionName + JSON.stringify(payload))
+  const lambdaParams = {
+    FunctionName: backupFunction,
+    InvocationType: 'RequestResponse',
+    LogType: 'Tail',
+    Payload: JSON.stringify({})
+  };
+  return Lambda.invoke(lambdaParams).promise()
+};
 
 function abbrState(input, to) {
   console.log('input is: ', input)
@@ -181,8 +188,11 @@ async function checkWeather(state, override) {
       }).promise()
 
       console.log('publishing to topic')
-      return await SNS.publish({
-        Message: responseText,
+      
+      await startBackupProcess()
+
+      await SNS.publish({
+        Message: "We have detected bad weather in your region. Your data has automatically been backed up.",
         Subject: "Umbrella Service",
         TopicArn: snsTopic
       }).promise()

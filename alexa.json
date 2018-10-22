@@ -1,0 +1,66 @@
+{
+  "interactionModel": {
+      "languageModel": {
+          "invocationName": "data umbrella",
+          "intents": [
+              {
+                  "name": "AMAZON.CancelIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.HelpIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.StopIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.NavigateHomeIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.FallbackIntent",
+                  "samples": []
+              },
+              {
+                  "name": "CheckWeatherIntent",
+                  "slots": [
+                      {
+                          "name": "state",
+                          "type": "AMAZON.US_STATE"
+                      }
+                  ],
+                  "samples": [
+                      "get the weather in {state}",
+                      "find the weather in {state}",
+                      "find weather in {state}",
+                      "get weather in {state}",
+                      "check weather in {state}",
+                      "what's the forecast in {state}",
+                      "look up the weather in {state}",
+                      "check the weather in {state}",
+                      "what is the weather like in {state}",
+                      "how is the weather in {state}"
+                  ]
+              },
+              {
+                  "name": "BackupDataIntent",
+                  "slots": [],
+                  "samples": [
+                      "Replicate my data",
+                      "Replicate the data",
+                      "Save my data",
+                      "Save the data",
+                      "Back it up",
+                      "Protect my data",
+                      "Protect the data",
+                      "Back up my data",
+                      "Back up the data"
+                  ]
+              }
+          ],
+          "types": []
+      }
+  }
+}

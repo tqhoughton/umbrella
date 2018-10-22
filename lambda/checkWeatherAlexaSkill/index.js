@@ -3,6 +3,20 @@
 
 const Alexa = require('ask-sdk');
 const https = require('https');
+const AWS = require('aws-sdk');
+const Lambda = new AWS.Lambda();
+const backupFunction = process.env.BACKUP_FUNCTION
+
+async function startBackupProcess() {
+  //   console.log("invokeLambda start: " + functionName + JSON.stringify(payload))
+  const lambdaParams = {
+    FunctionName: backupFunction,
+    InvocationType: 'RequestResponse',
+    LogType: 'Tail',
+    Payload: JSON.stringify({})
+  };
+  return Lambda.invoke(lambdaParams).promise()
+};
 
 // USAGE:
 // abbrState('ny', 'name');
@@ -140,8 +154,14 @@ const BackupDataHandler = {
     return request.type === 'IntentRequest'
       && request.intent.name === 'BackupDataIntent';
   },
-  handle(handlerInput) {
+  async handle(handlerInput) {
     // TODO: Actually back up the data by calling the other lambda
+    try {
+      let backupResult = await startBackupProcess()
+    } catch(e) {
+      console.error(e)
+      throw e;
+    }
     var responseText = "Okay, your data has been backed up.";
     return handlerInput.responseBuilder
       .speak(responseText)

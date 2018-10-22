@@ -41,6 +41,7 @@ Resources:
         Variables:
           SNS_TOPIC: !Ref BadWeatherTopic
           DATA_TABLE: !Ref SentNotificationsTable
+          BACKUP_FUNCTION: !Ref StartBackupProcess
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -55,6 +56,11 @@ Resources:
               Action:
                 - 'dynamodb:GetItem'
                 - 'dynamodb:PutItem'
+            - Effect: Allow
+              Resource:
+                - !GetAtt StartBackupProcess.Arn
+              Action:
+                - 'lambda:InvokeFunction'
         
   # Alexa skill for IT Pro to check the weather in a certain region
   CheckWeatherAlexaSkill:
@@ -66,6 +72,20 @@ Resources:
       Runtime: nodejs8.10
       CodeUri: ./lambda/checkWeatherAlexaSkill
       MemorySize: 128
+      Environment:
+        Variables:
+          BACKUP_FUNCTION: !Ref StartBackupProcess
+      Events:
+        Alexa:
+          Type: AlexaSkill
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Resource:
+                - !GetAtt StartBackupProcess.Arn
+              Action:
+                - 'lambda:InvokeFunction'
   # Lambda function that starts the backup process, if the IT Pro chooses to
   StartBackupProcess:
     Type: AWS::Serverless::Function
